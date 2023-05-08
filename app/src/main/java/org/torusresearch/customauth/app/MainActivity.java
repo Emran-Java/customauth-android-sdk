@@ -105,7 +105,7 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
     public void createSolanaAccount(View view) {
         TextView textView = findViewById(R.id.output);
 
-        if (this.privKey != null) {
+        if (this.privKey == null) {
             textView.setText("Please login first to generate solana ed25519 key pair");
             return;
         }
