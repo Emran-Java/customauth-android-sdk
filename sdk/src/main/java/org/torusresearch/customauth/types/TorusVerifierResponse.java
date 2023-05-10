@@ -40,4 +40,16 @@ public class TorusVerifierResponse {
     public LoginType getTypeOfLogin() {
         return typeOfLogin;
     }
+
+    @Override
+    public String toString() {
+        return "TorusVerifierResponse{" +
+                "email='" + email + '\'' +
+                ", name='" + name + '\'' +
+                ", profileImage='" + profileImage + '\'' +
+                ", verifier='" + verifier + '\'' +
+                ", verifierId='" + verifierId + '\'' +
+                ", typeOfLogin=" + typeOfLogin +
+                '}';
+    }
 }

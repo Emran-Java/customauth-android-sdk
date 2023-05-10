@@ -6,6 +6,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 
@@ -68,11 +69,18 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
     private CustomAuth torusSdk;
     private LoginVerifier selectedLoginVerifier;
     private BigInteger privKey = null;
+    private TextView textView;
+    private ProgressBar pbLoader;
+    private String authPublick = "0x2eE31d92Ca3C994B7A476f07dAD3cffc70EB7FB3";
+    private BigInteger authPrivate = new BigInteger("85472410604589892354211069310546408403280615874058814307178516967716168789622");
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        textView = findViewById(R.id.output);
+        pbLoader = (ProgressBar) findViewById(R.id.pbLoader);
 
         // Option 1. Deep links if your OAuth provider supports it
         // DirectSdkArgs args = new DirectSdkArgs("torusapp://org.torusresearch.customauthandroid/redirect", TorusNetwork.TESTNET);
@@ -83,6 +91,7 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
 
         // Initialize CustomAuth
         this.torusSdk = new CustomAuth(args, this);
+       // this.torusSdk.nodeDetailManager.getNodeDetails()
         Spinner spinner = findViewById(R.id.verifierList);
         List<LoginVerifier> loginVerifierList = new ArrayList<>(verifierMap.values());
         ArrayAdapter<LoginVerifier> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, loginVerifierList);
@@ -103,21 +112,25 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
     }
 
     public void createSolanaAccount(View view) {
-        TextView textView = findViewById(R.id.output);
+        //TextView textView = findViewById(R.id.output);
 
         if (this.privKey == null) {
             textView.setText("Please login first to generate solana ed25519 key pair");
-            return;
+            //return;
+            this.privKey = authPrivate;
         }
+        pbLoader.setVisibility(View.VISIBLE);
         TweetNaclFast.Signature.KeyPair ed25519KeyPair = this.getEd25199Key(this.privKey.toString(16));
         Account SolanaAccount = new Account(ed25519KeyPair.getSecretKey());
         String pubKey = SolanaAccount.getPublicKey().toBase58();
         String secretKey = Base58.encode(SolanaAccount.getSecretKey());
         String accountInfo = String.format("Solana account secret key is %s and public Key %s", secretKey, pubKey);
         textView.setText(accountInfo);
+        pbLoader.setVisibility(View.GONE);
     }
 
     public void getTorusKey(View view) throws ExecutionException, InterruptedException {
+        pbLoader.setVisibility(View.VISIBLE);
         String verifier = "google-lrc";
         String verifierId = "hello@tor.us";
         HashMap<String, Object> verifierParamsHashMap = new HashMap<>();
@@ -126,13 +139,14 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         NodeDetails nodeDetails = torusSdk.nodeDetailManager.getNodeDetails(verifier, verifierId).get();
         TorusPublicKey publicKey = torusSdk.torusUtils.getPublicAddress(nodeDetails.getTorusNodeEndpoints(), nodeDetails.getTorusNodePub(), new VerifierArgs(verifier, verifierId)).get();
         Log.d("public address", publicKey.getAddress());
+        textView.setText(textView.getText()+"\n\n"+"Torus public address: "+publicKey+"\nnodeDetails: "+nodeDetails);
+        pbLoader.setVisibility(View.GONE);
         // torusSdk.getTorusKey(verifier, verifierId, verifierParamsHashMap, idToken);
     }
 
     private void renderError(Throwable error) {
         Log.e("result:error", "error", error);
         Throwable reason = Helpers.unwrapCompletionException(error);
-        TextView textView = findViewById(R.id.output);
         if (reason instanceof UserCancelledException || reason instanceof NoAllowedBrowserFoundException)
             textView.setText(error.getMessage());
         else
@@ -143,12 +157,15 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
     public void singleLoginTest() {
         Log.d("result:selecteditem", this.selectedLoginVerifier.toString());
         Auth0ClientOptions.Auth0ClientOptionsBuilder builder = null;
+        pbLoader.setVisibility(View.VISIBLE);
+
         if (this.selectedLoginVerifier.getDomain() != null) {
             builder = new Auth0ClientOptions.Auth0ClientOptionsBuilder(this.selectedLoginVerifier.getDomain());
             builder.setVerifierIdField(this.selectedLoginVerifier.getVerifierIdField());
             builder.setVerifierIdCaseSensitive(this.selectedLoginVerifier.isVerfierIdCaseSensitive());
         }
         CompletableFuture<TorusLoginResponse> torusLoginResponseCf;
+
         if (builder == null) {
             torusLoginResponseCf = this.torusSdk.triggerLogin(new SubVerifierDetails(this.selectedLoginVerifier.getTypeOfLogin(),
                     this.selectedLoginVerifier.getVerifier(),
@@ -165,12 +182,16 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
 
         torusLoginResponseCf.whenComplete((torusLoginResponse, error) -> {
             if (error != null) {
+                pbLoader.setVisibility(View.GONE);
                 renderError(error);
             } else {
+
                 String publicAddress = torusLoginResponse.getPublicAddress();
                 this.privKey = torusLoginResponse.getPrivateKey();
+
                 Log.d(MainActivity.class.getSimpleName(), publicAddress);
-                ((TextView) findViewById(R.id.output)).setText(publicAddress);
+                textView.setText(publicAddress);
+                pbLoader.setVisibility(View.GONE);
             }
         });
     }
@@ -193,9 +214,26 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         });
     }
 
+    private void myTry(){
+        String domain = "torus-test.auth0.com";
+        LoginVerifier loginVerifier = new LoginVerifier("Hosted Email Passwordless", LoginType.JWT, "P7PJuBCXIHP41lcyty0NEb7Lgf7Zme8Q",
+                "torus-auth0-passwordless", domain, "name", false);
+        this.selectedLoginVerifier = loginVerifier;
+
+
+
+    }
+
     @Override
     public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
         this.selectedLoginVerifier = (LoginVerifier) adapterView.getSelectedItem();
+        //Auth0ClientOptions.Auth0ClientOptionsBuilder builder = null;
+        Auth0ClientOptions.Auth0ClientOptionsBuilder builder = new Auth0ClientOptions.Auth0ClientOptionsBuilder(this.selectedLoginVerifier.getDomain());
+        builder.setVerifierIdField(this.selectedLoginVerifier.getVerifierIdField());
+        builder.setVerifierIdCaseSensitive(this.selectedLoginVerifier.isVerfierIdCaseSensitive());
+
+        //CustomAuth customAuth = new CustomAuth()
+
     }
 
     @Override

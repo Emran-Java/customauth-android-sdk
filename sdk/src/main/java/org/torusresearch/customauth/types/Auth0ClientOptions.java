@@ -258,5 +258,52 @@ public class Auth0ClientOptions {
         public Auth0ClientOptions build() {
             return new Auth0ClientOptions(this);
         }
+
+        @Override
+        public String toString() {
+            return "Auth0ClientOptionsBuilder{" +
+                    "domain='" + domain + '\'' +
+                    ", client_id='" + client_id + '\'' +
+                    ", leeway='" + leeway + '\'' +
+                    ", verifierIdField='" + verifierIdField + '\'' +
+                    ", isVerifierIdCaseSensitive=" + isVerifierIdCaseSensitive +
+                    ", display=" + display +
+                    ", prompt=" + prompt +
+                    ", max_age='" + max_age + '\'' +
+                    ", ui_locales='" + ui_locales + '\'' +
+                    ", id_token_hint='" + id_token_hint + '\'' +
+                    ", login_hint='" + login_hint + '\'' +
+                    ", acr_values='" + acr_values + '\'' +
+                    ", scope='" + scope + '\'' +
+                    ", audience='" + audience + '\'' +
+                    ", connection='" + connection + '\'' +
+                    ", additionalParams=" + additionalParams +
+                    '}';
+        }
+    }
+
+    @Override
+    public String toString() {
+        return "Auth0ClientOptions{" +
+                "additionalParams=" + additionalParams +
+                ", domain='" + domain + '\'' +
+                ", client_id='" + client_id + '\'' +
+                ", leeway='" + leeway + '\'' +
+                ", verifierIdField='" + verifierIdField + '\'' +
+                ", isVerifierIdCaseSensitive=" + isVerifierIdCaseSensitive +
+                ", display=" + display +
+                ", prompt=" + prompt +
+                ", max_age='" + max_age + '\'' +
+                ", ui_locales='" + ui_locales + '\'' +
+                ", id_token_hint='" + id_token_hint + '\'' +
+                ", login_hint='" + login_hint + '\'' +
+                ", acr_values='" + acr_values + '\'' +
+                ", scope='" + scope + '\'' +
+                ", audience='" + audience + '\'' +
+                ", connection='" + connection + '\'' +
+                ", state='" + state + '\'' +
+                ", response_type='" + response_type + '\'' +
+                ", nonce='" + nonce + '\'' +
+                '}';
     }
 }

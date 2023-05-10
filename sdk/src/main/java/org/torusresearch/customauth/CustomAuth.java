@@ -66,17 +66,30 @@ public class CustomAuth {
     }
 
     public CompletableFuture<TorusLoginResponse> triggerLogin(SubVerifierDetails subVerifierDetails) {
+
         ILoginHandler handler = HandlerFactory.createHandler(new CreateHandlerParams(subVerifierDetails.getClientId(), subVerifierDetails.getVerifier(),
                 this.customAuthArgs.getRedirectUri(), subVerifierDetails.getTypeOfLogin(), this.customAuthArgs.getBrowserRedirectUri(), subVerifierDetails.getJwtParams()));
+
         return handler.handleLoginWindow(context, subVerifierDetails.getIsNewActivity(), subVerifierDetails.getPreferCustomTabs(), subVerifierDetails.getAllowedBrowsers())
                 .thenComposeAsync(loginWindowResponse -> handler.getUserInfo(loginWindowResponse).thenApply((userInfo) -> Pair.create(userInfo, loginWindowResponse)))
                 .thenComposeAsync(pair -> {
+
                     TorusVerifierResponse userInfo = pair.first;
+                    Log.d("cLog", "userInfo:" +userInfo.toString());
                     LoginWindowResponse response = pair.second;
+                    Log.d("cLog", "response: "+response.toString());
+
                     HashMap<String, Object> verifierParams = new HashMap<>();
+
                     verifierParams.put("verifier_id", userInfo.getVerifierId());
-                    return this.getTorusKey(subVerifierDetails.getVerifier(), userInfo.getVerifierId(), verifierParams, !Helpers.isEmpty(response.getIdToken()) ? response.getIdToken() : response.getAccessToken())
-                            .thenApply(torusKey -> Triplet.create(userInfo, response, torusKey));
+                    return this.getTorusKey(
+                            subVerifierDetails.getVerifier(),
+                                    userInfo.getVerifierId(),
+                                    verifierParams,
+                                    !Helpers.isEmpty(response.getIdToken()) ? response.getIdToken() : response.getAccessToken()
+                            ).thenApply(torusKey ->
+                                    Triplet.create(userInfo, response, torusKey)
+                            );
                 }).thenApplyAsync(triplet -> {
                     TorusVerifierResponse torusVerifierResponse = triplet.first;
                     LoginWindowResponse loginWindowResponse = triplet.second;
