@@ -1,5 +1,7 @@
 package org.torusresearch.customauth.types;
 
+import java.util.Arrays;
+
 public class SubVerifierDetails {
     private LoginType typeOfLogin;
     private String verifier;
@@ -66,5 +68,18 @@ public class SubVerifierDetails {
     public SubVerifierDetails setAllowedBrowsers(String[] val) {
         allowedBrowsers = val;
         return this;
+    }
+
+    @Override
+    public String toString() {
+        return "SubVerifierDetails{" +
+                "typeOfLogin=" + typeOfLogin +
+                ", verifier='" + verifier + '\'' +
+                ", clientId='" + clientId + '\'' +
+                ", jwtParams=" + jwtParams +
+                ", isNewActivity=" + isNewActivity +
+                ", preferCustomTabs=" + preferCustomTabs +
+                ", allowedBrowsers=" + Arrays.toString(allowedBrowsers) +
+                '}';
     }
 }

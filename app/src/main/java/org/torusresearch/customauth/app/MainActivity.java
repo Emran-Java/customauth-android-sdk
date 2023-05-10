@@ -3,6 +3,7 @@ package org.torusresearch.customauth.app;
 import android.annotation.SuppressLint;
 import android.os.Bundle;
 import android.util.Log;
+import android.util.Pair;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -21,12 +22,17 @@ import org.torusresearch.customauth.types.AggregateVerifierType;
 import org.torusresearch.customauth.types.Auth0ClientOptions;
 import org.torusresearch.customauth.types.CustomAuthArgs;
 import org.torusresearch.customauth.types.LoginType;
+import org.torusresearch.customauth.types.LoginWindowResponse;
 import org.torusresearch.customauth.types.NoAllowedBrowserFoundException;
 import org.torusresearch.customauth.types.SubVerifierDetails;
 import org.torusresearch.customauth.types.TorusAggregateLoginResponse;
+import org.torusresearch.customauth.types.TorusKey;
 import org.torusresearch.customauth.types.TorusLoginResponse;
+import org.torusresearch.customauth.types.TorusVerifierResponse;
+import org.torusresearch.customauth.types.TorusVerifierUnionResponse;
 import org.torusresearch.customauth.types.UserCancelledException;
 import org.torusresearch.customauth.utils.Helpers;
+import org.torusresearch.customauth.utils.Triplet;
 import org.torusresearch.fetchnodedetails.types.NodeDetails;
 import org.torusresearch.fetchnodedetails.types.TorusNetwork;
 import org.torusresearch.torusutils.types.TorusPublicKey;
@@ -116,8 +122,8 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
 
         if (this.privKey == null) {
             textView.setText("Please login first to generate solana ed25519 key pair");
-            //return;
-            this.privKey = authPrivate;
+            return;
+            //this.privKey = authPrivate;
         }
         pbLoader.setVisibility(View.VISIBLE);
         TweetNaclFast.Signature.KeyPair ed25519KeyPair = this.getEd25199Key(this.privKey.toString(16));
@@ -139,9 +145,9 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         NodeDetails nodeDetails = torusSdk.nodeDetailManager.getNodeDetails(verifier, verifierId).get();
         TorusPublicKey publicKey = torusSdk.torusUtils.getPublicAddress(nodeDetails.getTorusNodeEndpoints(), nodeDetails.getTorusNodePub(), new VerifierArgs(verifier, verifierId)).get();
         Log.d("public address", publicKey.getAddress());
-        textView.setText(textView.getText()+"\n\n"+"Torus public address: "+publicKey+"\nnodeDetails: "+nodeDetails);
+        textView.setText(textView.getText()+"\n\n"+"Torus public address: "+publicKey.getAddress()/*+"\n\nnodeDetails: "+nodeDetails*/);
         pbLoader.setVisibility(View.GONE);
-        // torusSdk.getTorusKey(verifier, verifierId, verifierParamsHashMap, idToken);
+         //torusSdk.getTorusKey(verifier, verifierId, verifierParamsHashMap, idToken);
     }
 
     private void renderError(Throwable error) {
@@ -214,14 +220,60 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         });
     }
 
-    private void myTry(){
+    public void myTry(View view){
         String domain = "torus-test.auth0.com";
         LoginVerifier loginVerifier = new LoginVerifier("Hosted Email Passwordless", LoginType.JWT, "P7PJuBCXIHP41lcyty0NEb7Lgf7Zme8Q",
                 "torus-auth0-passwordless", domain, "name", false);
         this.selectedLoginVerifier = loginVerifier;
 
+        String verifier = "google-lrc";
+        String verifierId = "hello@tor.us";
+        HashMap<String, Object> verifierParamsHashMap = new HashMap<>();
+        verifierParamsHashMap.put("verifier_id", verifierId);
+        String idToken = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImcyMWtLQ0tYTE04dmNQYlBNb1JWMSJ9.eyJuaWNrbmFtZSI6ImUwMTgzMzE4NDAyNyIsIm5hbWUiOiJlMDE4MzMxODQwMjdAZ21haWwuY29tIiwicGljdHVyZSI6Imh0dHBzOi8vcy5ncmF2YXRhci5jb20vYXZhdGFyL2Q0MjY2NzFiMjNjYWM1OTljY2I0Nzc1ZWZmZWU0YzM4P3M9NDgwJnI9cGcmZD1odHRwcyUzQSUyRiUyRmNkbi5hdXRoMC5jb20lMkZhdmF0YXJzJTJGZTAucG5nIiwidXBkYXRlZF9hdCI6IjIwMjMtMDUtMTBUMDg6NDQ6MjcuMzExWiIsImVtYWlsIjoiZTAxODMzMTg0MDI3QGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJpc3MiOiJodHRwczovL2Rldi1vYzFlZHhtYWJrcXNnajJkLmpwLmF1dGgwLmNvbS8iLCJhdWQiOiJDU2RZZDVoaTJKM2xYZ1pIVzh3bmZNdlVjRjhwOVBXcSIsImlhdCI6MTY4MzcwODI2NywiZXhwIjoxNjgzNzQ0MjY3LCJzdWIiOiJlbWFpbHw2NDViNTNjZWU4N2ZmNWRhYjQzMjY2ZmQifQ.ZZ77umQtgI9_oRgF-SgXemjRh9Y-I0Qti9szOg_rLNvWNKPY03JTQVyh2ZVsNN_Js0GyPsTPwDJ9Vv4RzqugMl_9LO5roGGKi4teB3kKxX9pPfGIY_ak3ddg4VXEoQeQ4s0Hv9RNTSsMdipx_x771hbOdNcTtj9GsQeEawBLcVzRbzfa_Ghc1QN8UGKHb7SF87jXL4hWPO6mo2s3ZONyDeuuAHK8DV-Mrpl89qjKfuFRt6dHZDDsSqgWfjIlep1qNBEwsx1pm08gS8ZR4sQzsF89Vz5HPmV1Zj4sIA7MVYYua82r1s7SB4r2ZLonkhAw8iWcjiNxRvYCuW2lfT3Dfg";
+        //CompletableFuture<TorusKey> aa = torusSdk.getTorusKey(verifier, verifierId, verifierParamsHashMap, idToken).thenApply((torusKey) -> Pair.create(userInfoArray, torusKey));
+        List<TorusVerifierResponse> userInfoArray = new ArrayList<>();
 
+        /*private final String email;
+        private final String name;
+        private final String profileImage;
+        private final String verifier;
+        private final String verifierId;
+        private final LoginType typeOfLogin;
+        */
+        TorusVerifierResponse userInfo = new TorusVerifierResponse(
+                "e01833184027@gmail.com",
+                "e01833184027@gmail.com",
+                "https://s.gravatar.com/avatar/d426671b23cac599ccb4775effee4c38?s=480&r=pg&d=https%3A%2F%2Fcdn.auth0.com%2Favatars%2Fe0.png",
+                "torus-auth0-passwordless",
+                "e01833184027@gmail.com",
+                LoginType.JWT
+        );
+        Log.d("cLog", "userInfo:" + userInfo.toString());
 
+        /*
+        private String accessToken;
+        private String idToken;
+        * */
+        LoginWindowResponse response2 = new LoginWindowResponse();
+        response2.setAccessToken("eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIiwiaXNzIjoiaHR0cHM6Ly9kZXYtb2MxZWR4bWFia3FzZ2oyZC5qcC5hdXRoMC5jb20vIn0..Qij8YbNUBCyVo4vf.A4hkTqBH-jV5GfZWFKVHFbZcdALY8MSEKKPErO-kzgeuNLZoe3kvqG71w6q5XSLn3v6a6SWQzEOhIiykqM756z0Gq65HFt-to3xJS3e9PvjHpW2WoBfAMlO0sHK3elaSRagygfC8WRhBs-s_ybxTxlTZfEJP_ANbFO1ynsRH1H2Rl2yPSdhRj9cCx1S5kKJFsBSuvs0rmohwQ5VLzlyQwtTQkzzdRwitadNnTpuz0wK1sZJgji9fBX3UfHXCnQh15r7YXlQz8pd9nZC5qUeoWf3lsbsMztJAmBfdvyMnjAFDL4VUjcd_tkjgxyRVe55diaWx5Mdr4KBjqoHrSDhVb1msA3wNn_Wul_eES8yC6D0JvsB2-v9QJBdT1vHjPX9L7w.qSAlwXSGeLNb1YuPycDjeg");
+        response2.setIdToken("eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImcyMWtLQ0tYTE04dmNQYlBNb1JWMSJ9.eyJuaWNrbmFtZSI6ImUwMTgzMzE4NDAyNyIsIm5hbWUiOiJlMDE4MzMxODQwMjdAZ21haWwuY29tIiwicGljdHVyZSI6Imh0dHBzOi8vcy5ncmF2YXRhci5jb20vYXZhdGFyL2Q0MjY2NzFiMjNjYWM1OTljY2I0Nzc1ZWZmZWU0YzM4P3M9NDgwJnI9cGcmZD1odHRwcyUzQSUyRiUyRmNkbi5hdXRoMC5jb20lMkZhdmF0YXJzJTJGZTAucG5nIiwidXBkYXRlZF9hdCI6IjIwMjMtMDUtMTBUMDg6NDQ6MjcuMzExWiIsImVtYWlsIjoiZTAxODMzMTg0MDI3QGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJpc3MiOiJodHRwczovL2Rldi1vYzFlZHhtYWJrcXNnajJkLmpwLmF1dGgwLmNvbS8iLCJhdWQiOiJDU2RZZDVoaTJKM2xYZ1pIVzh3bmZNdlVjRjhwOVBXcSIsImlhdCI6MTY4MzcwODI2NywiZXhwIjoxNjgzNzQ0MjY3LCJzdWIiOiJlbWFpbHw2NDViNTNjZWU4N2ZmNWRhYjQzMjY2ZmQifQ.ZZ77umQtgI9_oRgF-SgXemjRh9Y-I0Qti9szOg_rLNvWNKPY03JTQVyh2ZVsNN_Js0GyPsTPwDJ9Vv4RzqugMl_9LO5roGGKi4teB3kKxX9pPfGIY_ak3ddg4VXEoQeQ4s0Hv9RNTSsMdipx_x771hbOdNcTtj9GsQeEawBLcVzRbzfa_Ghc1QN8UGKHb7SF87jXL4hWPO6mo2s3ZONyDeuuAHK8DV-Mrpl89qjKfuFRt6dHZDDsSqgWfjIlep1qNBEwsx1pm08gS8ZR4sQzsF89Vz5HPmV1Zj4sIA7MVYYua82r1s7SB4r2ZLonkhAw8iWcjiNxRvYCuW2lfT3Dfg");
+        Log.d("cLog", "response: " + response2.toString());
+
+        //CompletableFuture<TorusKey> aa = torusSdk.getTorusKey(verifier, verifierId, verifierParamsHashMap, idToken);/*.thenApply((torusKey) -> Pair.create(userInfoArray, torusKey));*/
+        CompletableFuture<Object> aa = torusSdk.getTorusKey(verifier, verifierId, verifierParamsHashMap, idToken).thenApply((torusKey) ->
+                Pair.create(userInfoArray, torusKey)
+        );
+
+        /*   aa.thenApply(torusKey ->
+                Triplet.create(userInfo, response2, torusKey)
+        );
+        aa.thenApplyAsync(triplet ->
+                Log.d("cLog", "getPrivateKey:" +triplet.getPrivateKey())
+                //triplet.getPrivateKey()
+        );*/
+
+        Log.d("","");
     }
 
     @Override

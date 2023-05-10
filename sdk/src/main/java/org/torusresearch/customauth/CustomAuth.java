@@ -75,21 +75,21 @@ public class CustomAuth {
                 .thenComposeAsync(pair -> {
 
                     TorusVerifierResponse userInfo = pair.first;
-                    Log.d("cLog", "userInfo:" +userInfo.toString());
+                    Log.d("cLog", "userInfo:" + userInfo.toString());
                     LoginWindowResponse response = pair.second;
-                    Log.d("cLog", "response: "+response.toString());
+                    Log.d("cLog", "response: " + response.toString());
 
                     HashMap<String, Object> verifierParams = new HashMap<>();
 
                     verifierParams.put("verifier_id", userInfo.getVerifierId());
                     return this.getTorusKey(
                             subVerifierDetails.getVerifier(),
-                                    userInfo.getVerifierId(),
-                                    verifierParams,
-                                    !Helpers.isEmpty(response.getIdToken()) ? response.getIdToken() : response.getAccessToken()
-                            ).thenApply(torusKey ->
-                                    Triplet.create(userInfo, response, torusKey)
-                            );
+                            userInfo.getVerifierId(),
+                            verifierParams,
+                            !Helpers.isEmpty(response.getIdToken()) ? response.getIdToken() : response.getAccessToken()
+                    ).thenApply(torusKey ->
+                            Triplet.create(userInfo, response, torusKey)
+                    );
                 }).thenApplyAsync(triplet -> {
                     TorusVerifierResponse torusVerifierResponse = triplet.first;
                     LoginWindowResponse loginWindowResponse = triplet.second;
@@ -171,7 +171,10 @@ public class CustomAuth {
             aggregateVerifierParamsHashMap.put("verify_params", aggregateVerifierParams.getVerify_params());
             aggregateVerifierParamsHashMap.put("sub_verifier_ids", aggregateVerifierParams.getSub_verifier_ids());
             aggregateVerifierParamsHashMap.put("verifier_id", aggregateVerifierParams.getVerifier_id());
-            return this.getTorusKey(aggregateLoginParams.getVerifierIdentifier(), aggregateVerifierId, aggregateVerifierParamsHashMap, aggregateIdToken).thenApply((torusKey) -> Pair.create(userInfoArray, torusKey));
+            return this.getTorusKey(aggregateLoginParams.getVerifierIdentifier(),
+                            aggregateVerifierId,
+                            aggregateVerifierParamsHashMap, aggregateIdToken)
+                    .thenApply((torusKey) -> Pair.create(userInfoArray, torusKey));
         }).thenApplyAsync(pair -> {
             TorusKey torusKey = pair.second;
             List<TorusVerifierResponse> userInfoArray = pair.first;
@@ -190,24 +193,36 @@ public class CustomAuth {
     }
 
     public CompletableFuture<TorusKey> getTorusKey(String verifier, String verifierId, HashMap<String, Object> verifierParams, String idToken) {
-        return this.nodeDetailManager.getNodeDetails(verifier, verifierId).thenComposeAsync((details) -> torusUtils.getPublicAddress(details.getTorusNodeEndpoints(), details.getTorusNodePub(), new VerifierArgs(verifier, verifierId))
-                .thenApply((torusPublicKey) -> Pair.create(details, torusPublicKey))
-        ).thenComposeAsync(pair -> {
-            NodeDetails details = pair.first;
-            return torusUtils.retrieveShares(details.getTorusNodeEndpoints(), details.getTorusIndexes(), verifier, verifierParams, idToken).thenApply((shareResponse) -> Pair.create(pair.second, shareResponse));
-        }).thenComposeAsync(pair -> {
-            RetrieveSharesResponse shareResponse = pair.second;
-            TorusPublicKey torusPublicKey = pair.first;
-            CompletableFuture<TorusKey> response = new CompletableFuture<>();
-            if (shareResponse == null) {
-                response.completeExceptionally(new Exception("Invalid Share response"));
-            } else if (!shareResponse.getEthAddress().equalsIgnoreCase(torusPublicKey.getAddress())) {
-                response.completeExceptionally(new Exception("Share response doesn't match public key response"));
-            } else {
-                response.complete(new TorusKey(shareResponse.getPrivKey(), shareResponse.getEthAddress()));
-            }
-            return response;
-        });
+
+        return this.nodeDetailManager.getNodeDetails(verifier, verifierId)
+                .thenComposeAsync((details) -> torusUtils.getPublicAddress(details.getTorusNodeEndpoints(), details.getTorusNodePub(), new VerifierArgs(verifier, verifierId))
+                        .thenApply((torusPublicKey) -> Pair.create(details, torusPublicKey)))
+                .thenComposeAsync(pair -> {
+                    NodeDetails details = pair.first;
+
+                    return torusUtils.retrieveShares(details.getTorusNodeEndpoints(), details.getTorusIndexes(), verifier, verifierParams, idToken)
+                            .thenApply((shareResponse) -> Pair.create(pair.second, shareResponse));
+
+                })
+                .thenComposeAsync(pair -> {
+
+                    RetrieveSharesResponse shareResponse = pair.second;
+                    TorusPublicKey torusPublicKey = pair.first;
+
+                    CompletableFuture<TorusKey> response = new CompletableFuture<>();
+                    if (shareResponse == null) {
+                        response.completeExceptionally(new Exception("Invalid Share response"));
+                        Log.d("cLog", "Invalid Share response");
+                    } else if (!shareResponse.getEthAddress().equalsIgnoreCase(torusPublicKey.getAddress())) {
+                        response.completeExceptionally(new Exception("Share response doesn't match public key response"));
+                        Log.d("cLog", "Share response doesn't match public key response");
+                    } else {
+                        response.complete(new TorusKey(shareResponse.getPrivKey(), shareResponse.getEthAddress()));
+                    }
+
+                    Log.d("cLog", ""+shareResponse.getPrivKey());
+                    return response;
+                });
     }
 
     public CompletableFuture<TorusKey> getAggregateTorusKey(String verifier, String verifierId, TorusSubVerifierInfo[] subVerifierInfoArray) {

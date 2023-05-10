@@ -39,10 +39,17 @@
         android:id="@+id/llBtn"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-
         android:layout_alignParentBottom="true"
         android:gravity="bottom"
         android:orientation="vertical">
+
+        <Button
+            android:id="@+id/btnWindTry"
+            android:layout_width="200dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:onClick="myTry"
+            android:text="Wind Try"/>
 
         <Button
             android:id="@+id/launchButton"
